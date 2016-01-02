@@ -475,7 +475,7 @@ function updateResistor(r, keepText, keepColours) {
 	function modifyBandColours() {
 		var nR = Resistor.fromBands.apply(Resistor,d3.selectAll("#resistor .stripe:not(.removed) .label")[0].map(function(el) {
 		  v = el.textContent.trim().toLowerCase();
-		  /* wrote for friken ages to get the prefix matching to work but it's annoying af
+		  //wrote for friken ages to get the prefix matching to work but it's annoying af
 		  if (colourPrefixes[v] != undefined) {
 			 v = el.textContent = colourPrefixes[v][1];
 
@@ -490,7 +490,7 @@ function updateResistor(r, keepText, keepColours) {
 				sel.addRange(range);
 			}
 
-		}*/
+		}
 		return v
 		}));
 
