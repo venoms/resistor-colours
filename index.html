@@ -321,6 +321,7 @@ Resistor.prototype.numericColorMap = {
 	"-2": "silver"
 };
 
+
 var niceColours = {
 	"navy": "#001F3F",
 	"blue": "#0074D9",
@@ -349,6 +350,59 @@ Resistor.prototype.niceBands = function() {
 
 Resistor.prototype.reverseNumericColorMap =
 	invertMap(Resistor.prototype.numericColorMap);
+
+
+Resistor.prototype.reverseNumericColorMap["none"] = 
+	Resistor.prototype.reverseNumericColorMap["empty"] =
+	Resistor.prototype.reverseNumericColorMap["absent"] =
+	Resistor.prototype.reverseNumericColorMap["transparent"];
+
+Resistor.prototype.reverseNumericColorMap["grey"] =
+	Resistor.prototype.reverseNumericColorMap["gray"];
+
+
+
+
+// build prefix array for numericColourMap
+var colourPrefixes = prefixArray(Resistor.prototype.reverseNumericColorMap);
+
+function prefixArray(o){
+	var oo = {};
+
+	var add = function(k, v) {
+
+		if (k == undefined || v == undefined ) throw "why are you trying to store undefined dude";
+		// storage:
+		// prefix: [value, completed]
+		// viol: [7, violet]
+
+		if (k in oo){
+			console.log(k, "already in oo")
+			var t = oo[k];
+
+			if (t != undefined && k == t[1]) throw "direct prefix array collision, " + k + " is ambiguous. " +
+				t + " / " + [v[0], v[1]];
+			var klen = k.length;
+
+
+			oo[k] = undefined;
+
+			// move so no collision, also never
+			// set the full word as a prefix, i.e. never alias "black" to "black".
+			if (t != undefined && (klen + 1 != t[1].length)) add(t[1].slice(0, klen + 1), [t[0], t[1]]);
+			if (klen + 1 != v[1].length) add(v[1].slice(0, klen + 1), [v[0], v[1]]);
+		} else oo[k] = v;
+	};
+
+	Object.keys(o).forEach(function(v){
+		var full = v;
+		var value = o[v];
+		add(full[0], [value, full]);
+	});
+
+	return oo;
+};
+
 
 Resistor.prototype.toleranceBand = function() {
 	return this.toleranceMap[this.tolerance];
@@ -397,10 +451,6 @@ function selectAllFocus() {
 			sel = window.getSelection();
 			sel.removeAllRanges();
 			sel.addRange(range);
-		} else if (document.body.createTextRange) {
-			range = document.body.createTextRange();
-			range.moveToElementText(div);
-			range.select();
 		}
 	}, 1);
 };
@@ -422,6 +472,35 @@ function updateResistor(r, keepText, keepColours) {
 
 	var backgroundColorSetter = function(d) { return d in niceColours? niceColours[d]: d };
 
+	function modifyBandColours() {
+		var nR = Resistor.fromBands.apply(Resistor,d3.selectAll("#resistor .stripe:not(.removed) .label")[0].map(function(el) {
+		  v = el.textContent.trim().toLowerCase();
+		  /* wrote for friken ages to get the prefix matching to work but it's annoying af
+		  if (colourPrefixes[v] != undefined) {
+			 v = el.textContent = colourPrefixes[v][1];
+
+			var textElement = el.childNodes[0];
+			var sel, range;
+			if (window.getSelection && document.createRange) {
+				range = document.createRange();
+				range.setStart(textElement , v.length);
+				range.setEnd(textElement , el.textContent.length)
+				sel = window.getSelection();
+				sel.removeAllRanges();
+				sel.addRange(range);
+			}
+
+		}*/
+		return v
+		}));
+
+		if (nR.invalid()) {
+			input.className = "invalid";
+		} else {
+			input.className = "";
+			updateResistor(nR, false, false);
+		}
+	}
 
 
 	bands.enter()
@@ -431,23 +510,9 @@ function updateResistor(r, keepText, keepColours) {
 			.append("div")
 				.classed("label", true)
 				.attr("contentEditable", true)
-				.on("keydown", function() { if (d3.event.keyCode == 13) this.blur(), d3.event.preventDefault() })
+				.on("keydown", function() { if (d3.event.keyCode == 13) modifyBandColours(), this.blur(), d3.event.preventDefault() })
 				.on("focus", selectAllFocus)
-				.on("keyup", function(e) {
-
-	var nR = Resistor.fromBands.apply(Resistor,d3.selectAll("#resistor .stripe:not(.removed) .label")[0].map(function(v) {
-	  return v.textContent.trim().toLowerCase()
-	  	.replace(/none|empty|absent/, "transparent")
-	  	.replace(/grey/, "gray")
-	}));
-	if (nR.invalid()) {
-		input.className = "invalid";
-	} else {
-		input.className = "";
-		updateResistor(nR, false, false);
-	}
-
-				});
+				.on("keyup", modifyBandColours);
 
 	if (keepColours) {
 		bands
